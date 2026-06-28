@@ -1,5 +1,5 @@
 /* Service worker for めざせ、計算マスター！ — offline-first app shell cache. */
-const CACHE = 'keisan-master-v1';
+const CACHE = 'keisan-master-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const ASSETS = [
   './js/sound.js',
   './js/store.js',
   './js/ui.js',
+  './js/tutor.js',
+  './js/llm.js',
   './js/app.js',
   './icons/favicon.svg',
   './icons/icon-192.png',

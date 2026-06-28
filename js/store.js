@@ -81,6 +81,7 @@
     run = {
       mode: opts.mode,
       genreId: opts.genreId || null,
+      pool: opts.pool || null, // random時に出題対象を絞るジャンルID配列
       difficulty: diff,
       total: total,
       index: 0,
@@ -120,7 +121,7 @@
         correctAnswer: item.correctAnswer
       };
     } else {
-      run.current = Generator.nextQuestion(run.genreId, run.difficulty);
+      run.current = Generator.nextQuestion(run.genreId, run.difficulty, run.pool);
     }
     run.qStart = performance.now();
     return run.current;
@@ -177,6 +178,7 @@
     return {
       isCorrect: isCorrect,
       correctAnswer: q.correctAnswer,
+      hint: q.hint || null,
       durationMs: durationMs,
       xpAward: xpAward,
       combo: run.combo,

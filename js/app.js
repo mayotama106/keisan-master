@@ -28,16 +28,21 @@
     var screen = el('div.screen', null, [
       topBar(),
       el('div.mt6', null, [
-        el('div.h1', null, 'めざせ、計算マスター！'),
-        el('div.muted.mt2', null, '隙間時間で、計算をムリなく鍛えよう。')
+        el('div.h1', null, 'めざせ、％マスター！'),
+        el('div.muted.mt2', null, '割引もマージンも、電卓なしでスッと。')
       ]),
       el('div.cards.mt6', null, [
-        modeCard('primary', '🎲', 'ランダム', '全ジャンルから連続出題', function () { startQuiz({ mode: 'random' }); }),
-        modeCard('', '🎯', 'ジャンルを選ぶ', '足し算〜％計算を集中練習', function () { navigate(genreScreen); }),
+        modeCard('primary', '💯', '％にチャレンジ', '％計算をランダムに連続出題',
+          function () { startQuiz({ mode: 'random', pool: Generator.PERCENT_IDS }); }),
+        modeCard('', '🎯', 'ジャンルを選ぶ', '割引・○％増し・何％？ など', function () { navigate(genreScreen); }),
         modeCard('', '🔁', '復習', reviewCount ? reviewCount + '問の間違いを解き直す' : '間違えた問題がここに貯まります',
           function () { navigate(reviewScreen); }, reviewCount)
       ]),
-      el('div.row.gap3.mt6', null, [
+      el('div.row.gap3.mt4', null, [
+        el('button.btn.ghost', { onClick: function () { navigate(lectureScreen); } }, '📖 ％の使い方'),
+        el('button.btn.ghost', { onClick: function () { navigate(chatScreen); } }, '💬 先生にきく')
+      ]),
+      el('div.row.gap3.mt3', null, [
         el('button.btn.ghost', { onClick: function () { navigate(statsScreen); } }, '📊 統計'),
         el('button.btn.ghost', { onClick: function () { navigate(settingsScreen); } }, '⚙️ 設定')
       ])
@@ -55,19 +60,29 @@
 
   /* ============================ ジャンル選択 ============================ */
   function genreScreen() {
-    var tiles = Generator.GENRES.map(function (g) {
+    function tile(g) {
       return el('button.genre-tile', { onClick: function () { startQuiz({ mode: 'genre', genreId: g.id }); } }, [
         el('div.ic', null, g.icon),
         el('div.name', null, g.name)
       ]);
-    });
+    }
+    function tilesOf(ids) { return ids.map(function (id) { return tile(Generator.byId(id)); }); }
+
     return el('div.screen', null, [
       backHead('ジャンルを選ぶ'),
-      el('div.muted.mt2', null, '集中して鍛えたい計算を選ぼう。'),
-      el('div.genre-grid.mt4', null, tiles.concat([
-        el('button.genre-tile.all', { onClick: function () { startQuiz({ mode: 'random' }); } }, [
+      el('div.muted.mt2', null, '鍛えたい計算を選ぼう。'),
+      el('div.section-title', null, '％計算（メイン）'),
+      el('div.genre-grid', null, tilesOf(Generator.PERCENT_IDS).concat([
+        el('button.genre-tile.all', { onClick: function () { startQuiz({ mode: 'random', pool: Generator.PERCENT_IDS }); } }, [
+          el('div.ic', null, '💯'),
+          el('div', null, [el('div.name', null, '％ぜんぶランダム'), el('div.acc', null, '％の全タイプから出題')])
+        ])
+      ])),
+      el('div.section-title', null, '基礎（四則演算）'),
+      el('div.genre-grid', null, tilesOf(Generator.BASIC_IDS).concat([
+        el('button.genre-tile.all', { onClick: function () { startQuiz({ mode: 'random', pool: Generator.BASIC_IDS }); } }, [
           el('div.ic', null, '🎲'),
-          el('div', null, [el('div.name', null, 'すべて（ランダム）'), el('div.acc', null, '全ジャンルから出題')])
+          el('div', null, [el('div.name', null, '四則ランダム'), el('div.acc', null, '足し算〜割り算から出題')])
         ])
       ]))
     ]);
@@ -189,6 +204,7 @@
         overlay.appendChild(el('div.fb-mark.ng', null, '✕'));
         overlay.appendChild(el('div.fb-title', null, '不正解'));
         overlay.appendChild(el('div.fb-correct', null, ['正しい答えは ', el('b.tnum', null, String(result.correctAnswer))]));
+        if (result.hint) overlay.appendChild(el('div.fb-tip', null, '💡 ' + result.hint));
         overlay.appendChild(el('div.fb-hint', null, 'この問題は復習リストに追加されました'));
         overlay.appendChild(el('div.fb-hint.mt2', null, 'タップで次へ →'));
       }
@@ -459,14 +475,215 @@
     }
   }
 
+  /* ============================ ％レクチャー（小学生向け） ============================ */
+  function para(text) {
+    return el('div', null, String(text).split('\n').map(function (line) { return el('div.mt2', null, line); }));
+  }
+  // 100マスのうち pct 分を塗ったバー
+  function percentBar(pct, caption) {
+    return el('div.pbar-wrap', null, [
+      el('div.pbar', null, [
+        el('div.pbar-fill', { style: 'width:' + pct + '%' }, el('span', null, pct + '%')),
+        el('div.pbar-rest', null, caption || '')
+      ]),
+      el('div.pbar-scale', null, [el('span', null, '0'), el('span', null, '50'), el('span', null, '100')])
+    ]);
+  }
+
+  function lectureScreen() {
+    var pages = [
+      {
+        icon: '🍕', title: '① ％ってなに？',
+        visual: percentBar(30, ''),
+        body: '％（パーセント）は「100 を ぜんぶ としたとき、いくつ分か」を表すよ。\n上のバーは 100 のうち 30 ぬってあるから 30％。\n半分なら 50％、ぜんぶで 100％ だね。',
+        ex: 'ピザを100切れにして、そのうち30切れ → 30％ 🍕'
+      },
+      {
+        icon: '🔁', title: '② ％は「÷100」で小数に',
+        visual: el('div.formula', null, '25% = 25 ÷ 100 = 0.25'),
+        body: '計算するときは、％を 100 で わって 小数 に直すのがコツ。\nこれさえできれば、あとはかけ算するだけ！',
+        ex: '10% → 0.1 ／ 50% → 0.5 ／ 8% → 0.08'
+      },
+      {
+        icon: '💯', title: '③ 「○の□％」の出し方',
+        visual: el('div.formula', null, '80 の 15% = 80 × 0.15 = 12'),
+        body: '「もとの数 × (□÷100)」で出せるよ。\n① □％を小数にする（15% → 0.15）\n② もとの数にかける（80 × 0.15）',
+        ex: '200 の 25% は？ → 200 × 0.25 = 50'
+      },
+      {
+        icon: '🏷️', title: '④ 割引（□％引き）',
+        visual: el('div.formula', null, '1000円の 20%引き = 1000 × 0.8 = 800円'),
+        body: '「□％引き」は、もとの値段から □％ぶん 安くすること。\nコツ：残るのは (100 − □)％。\n20％引きなら、残り 80％ ＝ ×0.8。',
+        ex: '安くなる額は 1000 × 0.2 = 200円だよ'
+      },
+      {
+        icon: '📈', title: '⑤ ○％増し・消費税',
+        visual: el('div.formula', null, '800円の 10%増し = 800 × 1.1 = 880円'),
+        body: '「□％増し」は、もとに □％ぶん 足すこと。\nコツ：合計は (100 + □)％。\n消費税10％も同じで、×1.1 すればOK！',
+        ex: '500円の 30%増し → 500 × 1.3 = 650円'
+      },
+      {
+        icon: '❓', title: '⑥ 「A は B の何％？」',
+        visual: el('div.formula', null, '20 は 80 の何% → 20 ÷ 80 × 100 = 25%'),
+        body: 'くらべる数 ÷ もとの数 × 100 で出せるよ。\n① わり算する（20 ÷ 80 = 0.25）\n② 100 をかける（0.25 × 100 = 25）',
+        ex: '「くらべる ÷ もと × 100」と覚えよう！'
+      },
+      {
+        icon: '🎓', title: 'まとめ：これだけ覚えよう',
+        visual: el('div.cheat', null, [
+          el('div', null, '○の□% → ○ × (□÷100)'),
+          el('div', null, '□%引き → ○ × (100−□)/100'),
+          el('div', null, '□%増し → ○ × (100+□)/100'),
+          el('div', null, 'AはBの何% → A ÷ B × 100')
+        ]),
+        body: 'まずは「％を小数に直す」クセをつければ大丈夫。\nさっそく問題で試してみよう！',
+        ex: null, last: true
+      }
+    ];
+    var i = 0;
+    var host = el('div.screen');
+
+    function render() {
+      UI.clear(host);
+      var p = pages[i];
+      host.appendChild(backHead('％の使い方'));
+      host.appendChild(el('div.lecture-card.mt4', null, [
+        el('div.center', { style: 'font-size:44px' }, p.icon),
+        el('div.h2.center.mt2', null, p.title),
+        el('div.mt4', null, p.visual),
+        el('div.lecture-body.mt4', null, para(p.body)),
+        p.ex ? el('div.lecture-ex.mt4', null, ['🔎 ', p.ex]) : null
+      ]));
+      // ドット
+      host.appendChild(el('div.row.gap2.mt4', { style: 'justify-content:center' },
+        pages.map(function (_, k) { return el('div.dot' + (k === i ? '.on' : '')); })));
+      // ナビ
+      if (p.last) {
+        host.appendChild(el('div.btn-stack', null, [
+          el('button.btn.primary.lg', { onClick: function () { startQuiz({ mode: 'random', pool: Generator.PERCENT_IDS }); } }, '✏️ 問題で試す'),
+          el('button.btn.ghost', { onClick: function () { navigate(chatScreen); } }, '💬 先生にきく'),
+          el('button.btn.ghost', { onClick: function () { i = 0; render(); } }, '↩︎ もう一度よむ')
+        ]));
+      } else {
+        host.appendChild(el('div.row.gap3.mt4', null, [
+          i > 0 ? el('button.btn.ghost', { onClick: function () { i--; render(); } }, '← もどる') : el('div.grow'),
+          el('button.btn.primary', { class: 'grow', onClick: function () { i++; render(); } }, 'つぎへ →')
+        ]));
+      }
+      host.scrollTop = 0;
+    }
+    render();
+    return host;
+  }
+
+  /* ============================ ％の先生チャット ============================ */
+  function chatScreen() {
+    var history = [];       // LLM 用の会話履歴 [{role, content}]
+    var useLLM = false;     // 本格AI(TinySwallow)を使うか
+    var llmReady = false;
+
+    var host = el('div.screen.chat');
+    host.appendChild(backHead('％の先生'));
+
+    // 本格AI 切替（対応端末のみ実際に動く）
+    var supported = (typeof LLM !== 'undefined') && LLM.isSupported();
+    var sw = el('div.switch');
+    var aiNote = el('div.desc');
+    aiNote.textContent = supported
+      ? '本格ローカルAI（Sakana TinySwallow）に切替。初回はWiFiで〜1GBのDLが必要です。'
+      : 'この端末は本格AI非対応のため、内蔵の「％の先生」が答えます（本格AIはPC向け）。';
+    var aiRow = el('div.setting-card', null, [
+      el('div.row.between', null, [
+        el('div', null, [el('div.lbl', null, '🤖 本格AIで答える'), aiNote]),
+        supported ? sw : el('span.pill', null, '内蔵')
+      ])
+    ]);
+    host.appendChild(aiRow);
+
+    var log = el('div.chat-log');
+    host.appendChild(log);
+
+    var chips = el('div.chips');
+    Tutor.suggestions().forEach(function (q) {
+      chips.appendChild(el('button.chip', { onClick: function () { sendUser(q); } }, q));
+    });
+
+    var input = el('input.chat-input', { type: 'text', placeholder: '例）80の15%は？', enterkeyhint: 'send', autocomplete: 'off' });
+    var sendBtn = el('button.chat-send', { onClick: function () { sendUser(input.value); } }, '送信');
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); sendUser(input.value); } });
+    var inputRow = el('div.chat-input-row', null, [input, sendBtn]);
+
+    host.appendChild(chips);
+    host.appendChild(inputRow);
+
+    function bubble(role, text) {
+      var b = el('div.bubble.' + role);
+      setBubbleText(b, text);
+      log.appendChild(el('div.bubble-row.' + role, null, b));
+      log.scrollTop = log.scrollHeight;
+      return b;
+    }
+    function setBubbleText(b, text) {
+      UI.clear(b);
+      String(text).split('\n').forEach(function (line, idx) {
+        if (idx) b.appendChild(document.createElement('br'));
+        b.appendChild(document.createTextNode(line));
+      });
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function sendUser(text) {
+      text = (text || '').trim();
+      if (!text) return;
+      input.value = '';
+      bubble('user', text);
+      history.push({ role: 'user', content: text });
+
+      if (useLLM && llmReady) {
+        var out = bubble('bot', '…');
+        var acc = '';
+        LLM.ask(history, function (piece, full) { acc = full; setBubbleText(out, full); })
+          .then(function (full) { history.push({ role: 'assistant', content: full || acc }); })
+          .catch(function () { setBubbleText(out, '（AIの応答に失敗しました。内蔵の先生に切り替えます）'); useLLM = false; sw.classList.remove('on'); });
+      } else {
+        var r = Tutor.reply(text);
+        bubble('bot', r.text);
+        history.push({ role: 'assistant', content: r.text });
+      }
+    }
+
+    // 本格AI 切替
+    if (supported) {
+      sw.addEventListener('click', function () {
+        if (useLLM) { useLLM = false; sw.classList.remove('on'); bubble('bot', '内蔵の「％の先生」に戻したよ。'); return; }
+        sw.classList.add('on'); useLLM = true;
+        if (llmReady) { bubble('bot', '本格AI（TinySwallow）で答えるよ！'); return; }
+        var prog = bubble('bot', '🤖 モデルを準備中… 0%（初回はDLに数分かかります）');
+        LLM.load(function (p) {
+          var pctv = p && typeof p.progress === 'number' ? Math.round(p.progress * 100) : null;
+          setBubbleText(prog, '🤖 モデルを準備中… ' + (pctv != null ? pctv + '%' : '') + '\n' + (p && p.text ? p.text : ''));
+        }).then(function () {
+          llmReady = true; setBubbleText(prog, '✅ 準備OK！本格AI（Sakana TinySwallow）で答えるよ。何でも聞いてね。');
+        }).catch(function (err) {
+          useLLM = false; sw.classList.remove('on');
+          setBubbleText(prog, '⚠️ 本格AIを起動できませんでした（' + (err && err.message ? err.message : 'エラー') + '）。内蔵の先生が答えます。');
+        });
+      });
+    }
+
+    // 初期あいさつ
+    bubble('bot', Tutor.greeting());
+    return host;
+  }
+
   /* ============================ オンボーディング ============================ */
   function maybeOnboard() {
     if (window.localStorage.getItem(ONBOARD_KEY)) return;
     var steps = [
-      { icon: '🎲', t: '1タップで即スタート', d: 'ホームの「ランダム」を押すだけで計算ドリルが始まります。' },
-      { icon: '⌨️', t: '下のテンキーで入力', d: '答えを入力して「送信」。正誤はその場ですぐ分かります。' },
-      { icon: '🔁', t: '間違いは自動で復習に', d: '間違えた問題は復習リストへ。連続正解で卒業できます。' },
-      { icon: '🔥', t: 'XP・レベルで継続', d: '正解・速解・コンボでXPゲット。毎日続けてストリークを伸ばそう！' }
+      { icon: '💯', t: '％を得意になろう', d: '割引・○％増し・「何％？」まで、電卓なしでスッと解けるように練習します。' },
+      { icon: '📖', t: 'わからなければレクチャー', d: '「％の使い方」で、小学生にもわかるように基礎から説明。まず読むのもおすすめ。' },
+      { icon: '💬', t: '先生にチャットで質問', d: '「80の15%は？」のように聞くと、手順つきで答えてくれる先生ボットを内蔵。' },
+      { icon: '🔥', t: 'XP・レベルで継続', d: '正解・速解・コンボでXPゲット。間違いは自動で復習に貯まります。' }
     ];
     var i = 0;
     function render() {
