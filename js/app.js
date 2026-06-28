@@ -578,27 +578,8 @@
 
   /* ============================ ％の先生チャット ============================ */
   function chatScreen() {
-    var history = [];       // LLM 用の会話履歴 [{role, content}]
-    var useLLM = false;     // 本格AI(TinySwallow)を使うか
-    var llmReady = false;
-
     var host = el('div.screen.chat');
     host.appendChild(backHead('％の先生'));
-
-    // 本格AI 切替（対応端末のみ実際に動く）
-    var supported = (typeof LLM !== 'undefined') && LLM.isSupported();
-    var sw = el('div.switch');
-    var aiNote = el('div.desc');
-    aiNote.textContent = supported
-      ? '本格ローカルAI（Sakana TinySwallow）に切替。初回はWiFiで〜1GBのDLが必要です。'
-      : 'この端末は本格AI非対応のため、内蔵の「％の先生」が答えます（本格AIはPC向け）。';
-    var aiRow = el('div.setting-card', null, [
-      el('div.row.between', null, [
-        el('div', null, [el('div.lbl', null, '🤖 本格AIで答える'), aiNote]),
-        supported ? sw : el('span.pill', null, '内蔵')
-      ])
-    ]);
-    host.appendChild(aiRow);
 
     var log = el('div.chat-log');
     host.appendChild(log);
@@ -637,38 +618,8 @@
       if (!text) return;
       input.value = '';
       bubble('user', text);
-      history.push({ role: 'user', content: text });
-
-      if (useLLM && llmReady) {
-        var out = bubble('bot', '…');
-        var acc = '';
-        LLM.ask(history, function (piece, full) { acc = full; setBubbleText(out, full); })
-          .then(function (full) { history.push({ role: 'assistant', content: full || acc }); })
-          .catch(function () { setBubbleText(out, '（AIの応答に失敗しました。内蔵の先生に切り替えます）'); useLLM = false; sw.classList.remove('on'); });
-      } else {
-        var r = Tutor.reply(text);
-        bubble('bot', r.text);
-        history.push({ role: 'assistant', content: r.text });
-      }
-    }
-
-    // 本格AI 切替
-    if (supported) {
-      sw.addEventListener('click', function () {
-        if (useLLM) { useLLM = false; sw.classList.remove('on'); bubble('bot', '内蔵の「％の先生」に戻したよ。'); return; }
-        sw.classList.add('on'); useLLM = true;
-        if (llmReady) { bubble('bot', '本格AI（TinySwallow）で答えるよ！'); return; }
-        var prog = bubble('bot', '🤖 モデルを準備中… 0%（初回はDLに数分かかります）');
-        LLM.load(function (p) {
-          var pctv = p && typeof p.progress === 'number' ? Math.round(p.progress * 100) : null;
-          setBubbleText(prog, '🤖 モデルを準備中… ' + (pctv != null ? pctv + '%' : '') + '\n' + (p && p.text ? p.text : ''));
-        }).then(function () {
-          llmReady = true; setBubbleText(prog, '✅ 準備OK！本格AI（Sakana TinySwallow）で答えるよ。何でも聞いてね。');
-        }).catch(function (err) {
-          useLLM = false; sw.classList.remove('on');
-          setBubbleText(prog, '⚠️ 本格AIを起動できませんでした（' + (err && err.message ? err.message : 'エラー') + '）。内蔵の先生が答えます。');
-        });
-      });
+      var r = Tutor.reply(text);
+      bubble('bot', r.text);
     }
 
     // 初期あいさつ
